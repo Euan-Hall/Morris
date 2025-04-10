@@ -44,9 +44,9 @@ class Element(Node):
 
     Inherits class Node.
     """
-    def __init__(self, tag_name, parent=None):
+    def __init__(self, tag_name, attr, parent=None):
         self.tag_name = tag_name
-        self.attr = [] # Hash of Attributes
+        self.attr = [attr] # Hash of Attributes
         super().__init__(parent)
 
 
