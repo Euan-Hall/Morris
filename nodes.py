@@ -1,3 +1,7 @@
+from Document import Document
+from Element import Element
+from typing import Optional 
+
 class Node:
     """
     Base class for DOM classes.
@@ -6,63 +10,49 @@ class Node:
     Children
     """
     def __init__(self, parent=None):
-        self.parent = parent
+        self.ELEMENT_NODE: int = 1
+        self.ATTRIBUTE_NODE: int = 2
+        self.TEXT_NODE: int = 3
+        self.CDATA_SECTION_NODE: int = 4
+        self.ENTITY_REFERENCE_NODE: int = 5 # Not done?
+        self.ENTITY_NODE: int = 6 # Not done?
+        self.PROCESSING_INTSTRUCTION_NODE: int = 7
+        self.COMMENT_NODE: int = 8
+        self.DOCUMENT_NODE: int = 9
+        self.DOCUMENT_TYPE_NODE: int = 10
+        self.DOCUMENT_FRAGMENT_NODE: int = 11
+        self.NOTATION_NODE: int = 12
+        self.nodeType: int
+        self.nodeName: str
+
+        self.node_document: Optional[Document] = None
+
+        self.parentNode: Optional[Node] = None
+        self.parentEleent: Optional[Element] = None
         self.children = []
 
-        # If this node has a parent and isn't present as a child in the list, add to list.
-        if self.parent:
-            if self not in self.parent.children:
-                self.parent.addChild(self)
+    def hasChildren(self):
+        return self.children is not None
+    
+    def getFirstChild(self):
+        return self.children[0]
+    
+    def getLastChild(self):
+        return self.children[-1]
+    
+    def getNextSibling(self):
+        pass
 
-    def addChild(self, child):
-        self.children.append(child)
+    def getPreviousSibling(self):
+        pass
+    
+    def isConnected(self):
+        pass
 
-    def generateDict(self):
-        child = []
-
-        # If this node has children, generate a dictionary
-        if self.children:
-            for c in self.children:
-                temp =c.generateDict()
-                child.append(temp)
-
-        return {"Type" : type(self), 
-                "Children" : child}
-
-class Text(Node):
-    def __init__(self, text, parent=None):
-        self.text = text
-        super().__init__(parent)
-
-class Element(Node):
-    """
-    Element class (reperesnets HTML element, i.e. P, DIV)
-
-    Variables:
-    tag_name -> Type String
-    attr -> Array of class Attributes; help(attr) for more.
-
-    Inherits class Node.
-    """
-    def __init__(self, tag_name, attr, parent=None):
-        self.tag_name = tag_name
-        self.attr = [attr] # Hash of Attributes
-        super().__init__(parent)
-
-
-class Document(Node):
-    def __init__(self, url="localhost", parent=None):
-        self.url = url
-        super().__init__(parent)
-
-
-class Attr(Node):
-    def __init__(self, parent, localname=None, name=None, value="", element=None):
-        self.localname = localname 
-        self.name = name
-        self.value = str(value)
-        self.element = element
-        super().__init__(parent)
+    def getRootNode(self):
+        # Keep going through parent's until parent is None. Then return current node.
+        pass
+    
 
 
 
