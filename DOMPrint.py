@@ -1,6 +1,8 @@
 import nodes
-import tokenizer
 
+
+el = nodes.Element()
+print(el.getNodeType())
 # Generate DOM Tree from tokenizer
 def generateDict(self):
     child = []
