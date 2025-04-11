@@ -1,8 +1,9 @@
-import nodes
+import Node
 
-
-el = nodes.Element()
-print(el.getNodeType())
+el = Node.Element()
+el.localName = "p"
+el.namespace = "HTML"
+print(el.getNodeType(), el.getNodeName())
 # Generate DOM Tree from tokenizer
 def generateDict(self):
     child = []

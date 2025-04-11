@@ -1,5 +1,5 @@
 import parser
-import nodes
+import Node
 from enum import Enum
 from dataclasses import dataclass
 

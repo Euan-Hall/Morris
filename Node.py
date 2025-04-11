@@ -59,80 +59,97 @@ class Node:
             case Document():
                 return self.DOCUMENT_NODE
             
-            case DocuentType():
+            case DocumentType():
                 return self.DOCUMENT_TYPE_NODE
             
             case DocumentFragment():
                 return self.DOCUMENT_FRAGMENT_NODE
-        
-            case Attributes():
-                return self.NOTATION_NODE
             
-            case _:
+            case _: # Notation Node?
                 raise LookupError(f"Unknown Error whlie matching type: {self}, {type(self)}.")
+            
+    def getBaseURL(self):
+        pass # Sort out later
             
     def getNodeName(self):
         qualifiedName = ""
         match self:
             case Element():
                 if self.namespace == None:
-                    qualifiedName += self.localName
+                    qualifiedName = self.localName
+                else:
+                    qualifiedName = f"{self.namespace}:{self.localName}" 
                 
                 doc = self.getOwnerDocument() # Need to check namespace is HTML?
                 if doc and doc.type == 1:
                     qualifiedName = qualifiedName.upper
-            
+                return qualifiedName
             case Attributes():
-                return self.ATTRIBUTE_NODE
+                if self.namespace == None:
+                    return self.localName
+                return f"{self.namespace}:{self.localname}"
             
             case Text():
-                return self.TEXT_NODE
+                return "#text"
             
             case CDATASection():
-                return self.CDATA_SECTION_NODE
-            
-            case "B":
-                return self.ENTITY_REFERENCE_NODE
-            
-            case "A":
-                return self.ENTITY_NODE
+                return "#cdata-section" 
             
             case ProcessingInstruction():
-                return self.PROCESSING_INTSTRUCTION_NODE
+                return self.target
             
             case Comment():
-                return self.COMMENT_NODE
+                return "#comment"
             
             case Document():
-                return self.DOCUMENT_NODE
+                return "#document"
             
-            case DocuentType():
-                return self.DOCUMENT_TYPE_NODE
+            case DocumentType():
+                return self.name
             
             case DocumentFragment():
-                return self.DOCUMENT_FRAGMENT_NODE
-        
-            case Attributes():
-                return self.NOTATION_NODE
+                return "#document-fragment"
             
             case _:
                 raise LookupError(f"Unknown Error whlie matching type: {self}, {type(self)}.")
 
-
+    def getParentElement(self):
+        return self.parentElement
+    
     def hasChildren(self):
         return self.children is not None
     
+    def getChildNodes(self):
+        if self.hasChildren(self):
+            return self.children
+        return None
+    
     def getFirstChild(self):
-        return self.children[0]
+        if self.hasChildren():
+            return self.children[0]
+        return None
     
     def getLastChild(self):
-        return self.children[-1]
+        if self.hasChildren:
+            return self.children[-1]
+        return None
     
     def getNextSibling(self):
-        pass
+        if self.parentNode:
+            # Check position in child list
+            idx = self.parentNode.children.index(self)
+            length = len(self.parentNode.children)
+            if length > 1 and idx != length - 1:
+                return self.parentNode.children[idx+1]
+        return None
 
     def getPreviousSibling(self):
-        pass
+        if self.parentNode:
+            # Check position in child list
+            idx = self.parentNode.children.index(self)
+            if idx != 0:
+                return self.parentNode.children[idx-1]
+        return None
     
     def isConnected(self):
         pass
@@ -157,7 +174,63 @@ class Node:
             return None
         return self.node_document 
     
+    def getNodeValue(self):
+        match self:
+            case Attributes():
+                return self.value
+            
+            case CharacterData():
+                return self.data
+            
+            case _:
+                return None
 
+    def setNodeValue(self, value):
+        match self:
+            case Attributes():
+                if self.element:
+                    self.value = value
+                else:
+                    #To change an attribute attribute to value, run these steps:
+                    # Let oldValue be attribute’s value.
+                    oldValue = self.value
+
+                    # Set attribute’s value to value.
+                    self.value = value
+
+                    # Handle attribute changes for attribute with attribute’s element, oldValue, and value.
+
+                    # To handle attribute changes for an attribute attribute with element, oldValue, and newValue, run these steps:
+                    # Queue a mutation record of "attributes" for element with attribute’s local name, attribute’s namespace, oldValue, « », « », null, and null.
+                    # If element is custom, then enqueue a custom element callback reaction with element, callback name "attributeChangedCallback", and « attribute’s local name, oldValue, newValue, attribute’s namespace ».
+                    # Run the attribute change steps with element, attribute’s local name, oldValue, newValue, and attribute’s namespace.
+            
+            case CharacterData():
+                self.replaceData()    # Finish making this
+            
+            case _:
+                 pass
+
+    def getTextContext(self):
+        match self:
+            case Element():
+                # Concatenate all values of the text nodes of self's children.
+                # Must be in the order of the tree
+                # Depth first search, pre-order searching for all text nodes. This only does one level.
+                out = ""
+                if self.children:
+                    textNodes = list(filter(lambda x: type(x)==Text(), self.children))
+                    for c in textNodes:
+                        out += c.text
+                return out
+            
+            case Attributes():
+                return self.value
+            
+            case CharacterData():
+                return self.data
+            case _:
+                return None
 
 class Document(Node):    
     def __init__(self):
@@ -170,7 +243,7 @@ class Document(Node):
         self.allow_declatative_shadow_roots = False
 
 
-class DocuentType(Node):
+class DocumentType(Node):
     def __init__(self):
         self.name: str
         self.public_id: str
@@ -267,6 +340,18 @@ class CDATASection(Text):
 class CharacterData(Node):
     def __init__(self):
         self.data: str
+        self.length: int
+
+    def replaceData(self, offset: int, count: int, data: str):
+        if offset > self.length:
+            raise IndexError(f"Offset too large for current CharacterData Node: {self}")
+        
+        if offset + count > self.length:
+            count = offset - self.length
+
+        # so on so forth...
+
+
 
 class Comment(CharacterData):
     def __init__(self):

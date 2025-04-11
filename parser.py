@@ -1,4 +1,4 @@
-import nodes
+import Node
 
 class Parser:
     def __init__(self, input=""):
@@ -74,13 +74,13 @@ class Parser:
         self.expect(tag_name)
         self.expect(">")
         
-        return nodes.Element(tag_name, attr)
+        return Node.Element(tag_name, attr)
 
     def parse_text(self):
         # If < in input, throw erorr. Else make a Text Node.
         if "<" in self.input:
             raise ValueError("Text element cannot contain '<'. Please use \<.")
-        return nodes.Text(self.input)
+        return Node.Text(self.input)
         
 
 
