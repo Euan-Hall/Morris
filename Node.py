@@ -232,6 +232,58 @@ class Node:
             case _:
                 return None
 
+    def setTextConent(self, value=None):
+        # The textContent setter steps are to, if the given value is null, act as if it was the empty string instead, and then run set text content with this and the given value.
+        if not value:
+            value = ""
+
+        match self:
+            case Element():
+                # To string replace all with a string string within a node parent, run these steps:
+                # Let node be null.
+                # If string is not the empty string, then set node to a new Text node whose data is string and node document is parent’s node document.
+                # Replace all with node within parent.
+                pass
+            case Attributes():
+                if self.element:
+                    self.value = value
+                else: 
+                    oldValue = self.value
+                    self.value = value
+                    # Queue mutation request
+
+
+            case CharacterData():
+                # Replace data with node node, offset 0, count node’s length, and data value.
+                pass 
+
+            case _:
+                pass
+
+    def normalize(self):
+        for i, c in enumerate(self.children):
+            # An exclusive Text node is a Text node that is not a CDATASection node.
+            # This assumes one level. Run DFS for more than one level.
+            if type(c) == Text() and not type(c) == CDATASection():
+                if c.length == 0:
+                    self.children.remove(i)
+                else:
+                    # Find previous and next exclusive text nodes and concatenante them, avoiding duplicates
+                    # how tf do i implement that....
+                    self.replaceData()
+
+    def cloneNode(self, subtree=False):
+        # Check if shadowroot
+        if type(self) == ShadowRoot():
+            raise PermissionError("Not Supported.")
+        if subtree:
+            pass
+        else:
+            return 
+
+                
+
+
 class Document(Node):    
     def __init__(self):
         self.encoding = "utf-8"
