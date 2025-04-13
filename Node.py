@@ -272,14 +272,57 @@ class Node:
                     # how tf do i implement that....
                     self.replaceData()
 
-    def cloneNode(self, subtree=False):
-        # Check if shadowroot
-        if type(self) == ShadowRoot():
-            raise PermissionError("Not Supported.")
+    def cloneNode(self, subtree=False, parent=None):
+        copy = cloneSingleNode(self, self.node_document)
+        if parent:
+            parent.children.append(copy)
+        
         if subtree:
-            pass
-        else:
-            return 
+            for c in self.children:
+                c.cloneNode(subtree=subtree, parent=copy)
+                
+        if type(self) == Element() and self.shadow_root is not None and self.shadow_root.clonable:
+            # Assert: copy is not a shadow host.
+            if copy.shadow_root:
+                pass # This means it is a shadow host.
+
+        
+        def cloneSingleNode(self, node, document):
+            copy = None
+            match node:
+                case Element():
+                    copy = Element() # Document, LocalName, Namespace, namespace prefix, is value (need to implement that)
+                    for attr in node.attributes:
+                        copyAttribute = self.cloneNode(attr, node.node_document)
+                    copy.attributes.append(copyAttribute)
+
+                case Document():
+                    copy = Document() # Set copy’s encoding, content type, URL, origin, type, and mode to those of node.
+
+                case DocumentType():
+                    copy = DocumentType()
+                
+                case Attributes():
+                    copy = Attributes()
+                
+                case Text():
+                    copy = Text()
+                
+                case Comment():
+                    copy = Comment()
+                
+                case ProcessingInstruction():
+                    copy = ProcessingInstruction()
+                
+                case _:
+                    pass
+                    
+            # Assert: copy is a node.
+            if type(node) == Document(): 
+                document = copy
+                copy.node_document = document
+            return copy
+            
 
                 
 
@@ -336,6 +379,7 @@ class Element(Node):
         self.attributes: list
         self.custom_element_state: CustomElementState = CustomElementState.UNDEFINED
         self.element_defenition: str
+        self.shadow_root: Optional[ShadowRoot] = None
         
         super().__init__(parent)
 
