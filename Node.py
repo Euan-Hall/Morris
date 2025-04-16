@@ -21,6 +21,14 @@ class Node:
         self.DOCUMENT_TYPE_NODE: int = 10
         self.DOCUMENT_FRAGMENT_NODE: int = 11
         self.NOTATION_NODE: int = 12
+
+        self.DOCUMENT_POSITION_DISCONNECTED = 0x01
+        self.DOCUMENT_POSITION_PRECEDING = 0x02
+        self.DOCUMENT_POSITION_FOLLOWING = 0x04
+        self.DOCUMENT_POSITION_CONTAINS = 0x08
+        self.DOCUMENT_POSITION_CONTAINED_BY = 0x10
+        self.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20
+
         self.nodeType: int
         self.nodeName: str
 
@@ -286,45 +294,146 @@ class Node:
             if copy.shadow_root:
                 pass # This means it is a shadow host.
 
-        
-        def cloneSingleNode(self, node, document):
-            copy = None
-            match node:
-                case Element():
-                    copy = Element() # Document, LocalName, Namespace, namespace prefix, is value (need to implement that)
-                    for attr in node.attributes:
-                        copyAttribute = self.cloneNode(attr, node.node_document)
-                    copy.attributes.append(copyAttribute)
+    def cloneSingleNode(self, node, document):
+        copy = None
+        match node:
+            case Element():
+                copy = Element() # Document, LocalName, Namespace, namespace prefix, is value (need to implement that)
+                for attr in node.attributes:
+                    copyAttribute = self.cloneNode(attr, node.node_document)
+                copy.attributes.append(copyAttribute)
 
-                case Document():
-                    copy = Document() # Set copy’s encoding, content type, URL, origin, type, and mode to those of node.
+            case Document():
+                copy = Document() # Set copy’s encoding, content type, URL, origin, type, and mode to those of node.
 
+            case DocumentType():
+                copy = DocumentType()
+            
+            case Attributes():
+                copy = Attributes()
+            
+            case Text():
+                copy = Text()
+            
+            case Comment():
+                copy = Comment()
+            
+            case ProcessingInstruction():
+                copy = ProcessingInstruction()
+            
+            case _:
+                pass
+                
+        # Assert: copy is a node.
+        if type(node) == Document(): 
+            document = copy
+            copy.node_document = document
+        return copy
+
+    def isEqualNode(self, node):
+        if node and type(node) == type(self):
+            match self:
                 case DocumentType():
-                    copy = DocumentType()
+                    return self.name == node.name and self.public_id == node.public_id
+                case Element():
+                    return self.namespace == node.namespace and self.namespace_prefix == node.namespace_prefix and len(self.attr_list) == len(node.attr_list)
+                case Attributes():
+                    return self.namespace == node.namespace and self.localname == node.localname and self.value == node.value
+                case ProcessingInstruction():
+                    return self.target == node.target and self.data == node.data
+                case Text():
+                    return self.data == node.data
+                case Comment():
+                    return self.data == node.data
+                case _:
+                    return False
+
+    def isSameNode(self, node):
+        return self == node 
+    
+    def compareDocumentPosition(self, other):
+        pass
+
+    def contains(self, other):
+        if other:
+            # An inclusive descendant is an object or one of its descendants.
+            pass
+        return False
+
+    def lookupNamespacePrefix(self, namespace):
+        if self == Element():
+            if self.namespace == namespace and self.prefix:
+                return self.prefix
+            # Check attributes 
+            if self.parentElement:
+                return self.parentElement.locateNamespacePrefix(namespace)
+            return None
+        raise TypeError(f"Passed {type(self)} rather than Element.")
+                
+    def locateNamespace(self, prefix):
+        # Fully implement later ig
+        match self:
+            case Element():
+                if self.prefix == "xml":
+                    return "http://www.w3.org/XML/1998/namespace"
+                
+                if self.prefix == "xmlns":
+                    return "http://www.w3.org/2000/xmlns/"
+
+                #if self.namespace and self.prefix == prefix ??:
+                #    return namespace
+
+            case _:
+                pass 
+
+    def lookupPrefix(self, namespace):
+        if namespace:
+            match self:
+                case Element():
+                    return self.locateNamespacePrefix(namespace)
+                case Document():
+                    if self.node_document:
+                        return self.node_document.locateNamespacePrefix(namespace)
+                    return None
                 
                 case Attributes():
-                    copy = Attributes()
+                    if self.element:
+                        return self.element.locateNamespacePrefix(namespace)
+                    return None
                 
-                case Text():
-                    copy = Text()
+                case DocumentFragment():
+                    return None
                 
-                case Comment():
-                    copy = Comment()
-                
-                case ProcessingInstruction():
-                    copy = ProcessingInstruction()
-                
-                case _:
-                    pass
-                    
-            # Assert: copy is a node.
-            if type(node) == Document(): 
-                document = copy
-                copy.node_document = document
-            return copy
-            
+                case DocumentType():
+                    return None
 
-                
+                case _:
+                    if self.parentNode:
+                        return self.parentNode.locateNamespacePrefix(namespace)
+        return None
+    
+    def lookupNamespaceURI(self, prefix):
+        if prefix:
+            return self.locateNamespace(prefix)
+        return
+    
+    def isDefaultNamespace(self, namespace):
+        if namespace == "":
+            namespace = None
+        defaultNamespace = self.locateNamespace(None)
+        return defaultNamespace == namespace
+    
+    def insertBefore(self, node, child):
+        pass
+
+    def appendChild(self, node):
+        pass
+
+    def replaceChild(self, child):
+        pass
+
+    def removeChild(self, child):
+        pass
 
 
 class Document(Node):    
@@ -336,6 +445,8 @@ class Document(Node):
         self.type = 0 # xml or html (0 or 1?)
         self.mode = "no-quirks" # "no-quirks", "quirks", or "limited-quirks"
         self.allow_declatative_shadow_roots = False
+
+    
 
 
 class DocumentType(Node):
@@ -397,7 +508,7 @@ class Attributes(Node):
         self.prefix: Optional[str] = None
         self.localname: str
         self.value: str
-        self.element: Optional[Element.Element] = None
+        self.element: Optional[Element] = None
         super().__init__(parent)
 
 
