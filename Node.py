@@ -83,15 +83,8 @@ class Node:
         qualifiedName = ""
         match self:
             case Element():
-                if self.namespace == None:
-                    qualifiedName = self.localName
-                else:
-                    qualifiedName = f"{self.namespace}:{self.localName}" 
-                
-                doc = self.getOwnerDocument() # Need to check namespace is HTML?
-                if doc and doc.type == 1:
-                    qualifiedName = qualifiedName.upper
-                return qualifiedName
+                return self.getTagName()
+            
             case Attributes():
                 if self.namespace == None:
                     return self.localName
@@ -120,6 +113,9 @@ class Node:
             
             case _:
                 raise LookupError(f"Unknown Error whlie matching type: {self}, {type(self)}.")
+
+    def getQualifiedName(self):
+        return self.localName if not self.namespace else f"{self.prefix}:{self.localName}"
 
     def getParentElement(self):
         return self.parentElement
@@ -281,7 +277,7 @@ class Node:
                     self.replaceData()
 
     def cloneNode(self, subtree=False, parent=None):
-        copy = cloneSingleNode(self, self.node_document)
+        copy = self.cloneSingleNode(self, self.node_document)
         if parent:
             parent.children.append(copy)
         
@@ -438,32 +434,55 @@ class Node:
 
 class Document(Node):    
     def __init__(self):
+        self.implementation: DOMImplementation
         self.encoding = "utf-8"
         self.content_type = "application/xml"
         self.url = "about:blank"
+        self.documentURI: str = None
+        self.characterSet: str
+        self.charset: str
+        self.inputEncoding: str
         self.origin: str # Change to type Origin once implemented 
         self.type = 0 # xml or html (0 or 1?)
-        self.mode = "no-quirks" # "no-quirks", "quirks", or "limited-quirks"
+        self.compatMode = "no-quirks" # "no-quirks", "quirks", or "limited-quirks"
         self.allow_declatative_shadow_roots = False
-
     
+    def getImplementation(self):
+        return self.implementation
+    
+    def getURL(self):
+        pass
 
+    def getDocumentURI(self):
+        pass
 
+    def getCompatMode(self):
+        return "Backcompat" if self.compatMode=="quirks" else "CSS1Compat"
+
+    def getCharacterSet(self):
+        return self.encoding
+
+    def getCharset(self):
+        return self.encoding
+    
+    def getInputEncoding(self):
+        return self.encoding
+    
+    def getContentType(self):
+        return self.content_type
+    
 class DocumentType(Node):
     def __init__(self):
         self.name: str
         self.public_id: str
         self.sys_id: str
 
-    @property
     def getName(self):
         return self.name
     
-    @property
     def getPublicId(self):
         return self.public_id
     
-    @property
     def getSystemId(self):
         return self.sys_id
     
@@ -487,6 +506,11 @@ class Element(Node):
         self.namespace: str
         self.prefix: str
         self.localName: str
+        self.tagName: str
+        self.id: str
+        self.className: str
+        self.classList: Optional[DOMTokenList] = None
+        self.slot: str 
         self.attributes: list
         self.custom_element_state: CustomElementState = CustomElementState.UNDEFINED
         self.element_defenition: str
@@ -494,7 +518,61 @@ class Element(Node):
         
         super().__init__(parent)
 
+    def getNamespaceURI(self):
+        return self.namespace
+    
+    def getPrefix(self):
+        return self.prefix
+    
+    def getLocalName(self):
+        return self.localName
+    
+    def getTagName(self):
+        qualifiedName = self.getQualifiedName()
+        doc = self.getOwnerDocument() # Need to check namespace is HTML?
+        if self.namespace == "http://www.w3.org/1999/xhtml" and doc and doc.type == 1:
+            qualifiedName = qualifiedName.upper
+        return qualifiedName
         
+    def hasAttributes(self):
+        return bool(self.attributes)
+    
+    def getAttributeNames(self):
+        qualifiedNames = []
+        for attr in self.attributes:
+            if attr == Attributes:
+                qualifiedNames.append(attr.getQualifiedName())
+        return qualifiedNames
+    
+    def getAttribute(self, qualifiedName):
+        for attr in self.attributes(self):
+            if attr == Attributes:
+                if attr.getQualifiedName() == qualifiedName:
+                    return attr
+        return None
+
+    def getAttributeNS(self, namespace, localname):
+        for attr in self.attributes(self):
+            if attr == Attributes:
+                if attr.namespace == namespace and attr.localname == localname:
+                    return attr
+        return None
+    
+    def setAttribute(self, qualifiedName, value):
+        attr = self.getAttribute(qualifiedName)
+        if attr:
+            attr.value = value
+    
+    def setAttributeNS(self, namespace, localname, value):
+        attr = self.getAttributeNS(namespace, localname)
+        if attr:
+            attr.value = value
+
+
+class DOMTokenList:
+    def __init__(self):
+        self.length: int
+
 class CustomElementState(Enum):
     UNDEFINED = "undefined"
     FAILED = "failed"
@@ -511,7 +589,6 @@ class Attributes(Node):
         self.element: Optional[Element] = None
         super().__init__(parent)
 
-
 class ShadowRoot(DocumentFragment):
     def __init__(self):
         host: Element
@@ -522,10 +599,30 @@ class ShadowRoot(DocumentFragment):
         self.delegatesFocus: bool = False
         self.slotAssignment: SlotAssignmentMode
         self.clonable: bool = False
-        self.serialize: bool = False
+        self.serializable: bool = False
         self.host: Element = host
 
- 
+    def getMode(self):
+        return self.mode
+    
+    def getDelegatesFocus(self):
+        return self.delegatesFocus
+    
+    def getSlotAssignment(self):
+        return self.slotAssignment
+    
+    def getClonable(self):
+        return self.clonable
+    
+    def getSerialize(self):
+        return self.serializable
+    
+    def getHost(self):
+        return self.host
+    
+    def onSlotChange(self):
+        return 
+
 class ShadowRootMode(Enum):
     open = "open"
     closed = "closed"
@@ -534,7 +631,6 @@ class SlotAssignmentMode(Enum):
     manual = "manual"
     named = "named"
 
-
 class Text(Node):
     def __init__(self, parent=None):
         self.text: str
@@ -542,7 +638,6 @@ class Text(Node):
 
 class CDATASection(Text):
     pass
-
 
 class CharacterData(Node):
     def __init__(self):
@@ -558,8 +653,6 @@ class CharacterData(Node):
 
         # so on so forth...
 
-
-
 class Comment(CharacterData):
     def __init__(self):
         self.data: Optional[str] = None
@@ -567,3 +660,13 @@ class Comment(CharacterData):
 class ProcessingInstruction(CharacterData):
     def __init__(self):
         self.target: str
+
+class DOMImplementation:
+    def createDocumentType():
+        pass
+
+    def createDocument():
+        pass
+
+    def createHTMLDocument():
+        pass
